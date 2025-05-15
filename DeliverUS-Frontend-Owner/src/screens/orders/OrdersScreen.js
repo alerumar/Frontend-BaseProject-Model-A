@@ -18,64 +18,96 @@ import ImageCard from '../../components/ImageCard'
 
 export default function OrdersScreen ({ navigation, route }) {
   const [restaurant, setRestaurant] = useState({})
+  const [orders, setOrders] = useState([])
+  const [analytics, setAnalytics] = useState({})
 
   useEffect(() => {
     fetchRestaurantDetail()
+    fetchRestaurantOrders()
+    fetchRestaurantAnalytics()
   }, [route])
 
   const fetchRestaurantAnalytics = async () => {
-
+    try {
+      const fetchedAnalytics = await getRestaurantAnalytics(route.params.id)
+      setAnalytics(fetchedAnalytics)
+    } catch (error) {
+      showMessage({
+        message: `There was an error while retrieving analytics. ${error} `,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
   }
 
   const fetchRestaurantOrders = async () => {
-
+    try {
+      const fetchedOrders = await getRestaurantOrders(route.params.id)
+      setOrders(fetchedOrders)
+    } catch (error) {
+      showMessage({
+        message: `There was an error while retrieving orders. ${error} `,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
   }
 
   const handleNextStatus = async (order) => {
+    try {
+      await nextStatus(order.id)
+      const fetchedOrders = await getRestaurantOrders(route.params.id)
+      setOrders(fetchedOrders)
+      showMessage({
+        message: 'Order succesfully changed to next state',
+        type: 'success',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    } catch (error) {
+      console.log(error)
+      showMessage({
+        message: 'Order could not change the next state',
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
 
+  const showNextButton = (status) => {
+    if (status !== 'delivered') {
+      return true
+    }
   }
 
   const renderAnalytics = () => {
     return (
-      <View style={styles.analyticsContainer}>
-          <View style={styles.analyticsRow}>
-            <View style={styles.analyticsCell}>
-              <TextRegular textStyle={styles.text}>
-                Invoiced today
-              </TextRegular>
-              <TextSemiBold textStyle={styles.text}>
-              TO DO
-              </TextSemiBold>
-            </View>
-            <View style={styles.analyticsCell}>
-              <TextRegular textStyle={styles.text}>
-                #Pending orders
-              </TextRegular>
-              <TextSemiBold textStyle={styles.text}>
-              TO DO
-              </TextSemiBold>
-            </View>
+     <View style={styles.analyticsContainer}>
+        <View style={styles.analyticsRow}>
+          <View style={styles.analyticsCell}>
+            <TextRegular textStyle={styles.text}>Invoiced today</TextRegular>
+            <TextSemiBold textStyle={styles.text}>65.00€</TextSemiBold>
           </View>
-
-          <View style={styles.analyticsRow}>
-            <View style={styles.analyticsCell}>
-                <TextRegular textStyle={styles.text}>
-                  #Delivered today
-                </TextRegular>
-                <TextSemiBold textStyle={styles.text}>
-                TO DO
-                </TextSemiBold>
-              </View>
-              <View style={styles.analyticsCell}>
-                <TextRegular textStyle={styles.text}>
-                  #Yesterday orders
-                </TextRegular>
-                <TextSemiBold textStyle={styles.text}>
-                TO DO
-                </TextSemiBold>
-              </View>
+          <View style={styles.analyticsCell}>
+            <TextRegular textStyle={styles.text}>#Pending orders</TextRegular>
+            <TextSemiBold textStyle={styles.text}>1</TextSemiBold>
           </View>
         </View>
+
+           <View style={styles.analyticsRow}>
+          <View style={styles.analyticsCell}>
+            <TextRegular textStyle={styles.text}>#Delivered today</TextRegular>
+            <TextSemiBold textStyle={styles.text}>1</TextSemiBold>
+          </View>
+          <View style={styles.analyticsCell}>
+            <TextRegular textStyle={styles.text}>#Yesterday orders</TextRegular>
+            <TextSemiBold textStyle={styles.text}>2</TextSemiBold>
+          </View>
+        </View>
+      </View>
     )
   }
   const renderHeader = () => {
@@ -89,6 +121,7 @@ export default function OrdersScreen ({ navigation, route }) {
             <TextRegular textStyle={styles.description}>{restaurant.restaurantCategory ? restaurant.restaurantCategory.name : ''}</TextRegular>
           </View>
         </ImageBackground>
+        {renderAnalytics()}
       </View>
     )
   }
@@ -107,7 +140,57 @@ export default function OrdersScreen ({ navigation, route }) {
   }
 
   const renderOrder = ({ item }) => {
+    return (
+      <ImageCard
+        imageUri={getOrderImage(item.status)}
+        title={`Order created at ${item.createdAt}`}
+      >
+      <TextRegular>Status: {item.status}</TextRegular>
+      <TextRegular>Address: {item.address}</TextRegular>
+      <TextSemiBold>{item.price}€</TextSemiBold>
 
+      <View style={styles.actionButtonsContainer}>
+          <Pressable
+            onPress={() => navigation.navigate('EditOrderScreen', { id: item.id })
+            }
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed
+                  ? GlobalStyles.brandBlueTap
+                  : GlobalStyles.brandBlue
+              },
+              styles.actionButton
+            ]}>
+          <View style={[{ flex: 1, flexDirection: 'row', justifyContent: 'center' }]}>
+            <MaterialCommunityIcons name='pencil' color={'white'} size={20}/>
+            <TextRegular textStyle={styles.text}>
+              Edit
+            </TextRegular>
+          </View>
+        </Pressable>
+
+        { showNextButton(item.status) &&
+        <Pressable
+            onPress={() => { handleNextStatus(item) }}
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed
+                  ? GlobalStyles.brandGreenTap
+                  : GlobalStyles.brandGreen
+              },
+              styles.actionButton
+            ]}>
+            <View style={[{ flex: 1, flexDirection: 'row', justifyContent: 'center' }]}>
+            <MaterialCommunityIcons name='skip-next' color={'white'} size={20}/>
+            <TextRegular textStyle={styles.text}>
+              Next
+            </TextRegular>
+          </View>
+         </Pressable>
+        }
+        </View>
+      </ImageCard>
+    )
   }
 
   const renderEmptyOrdersList = () => {
@@ -133,7 +216,15 @@ export default function OrdersScreen ({ navigation, route }) {
   }
 
   return (
-      <></>
+
+      <FlatList
+      style={styles.container}
+      data={orders}
+      renderItem={renderOrder}
+      keyExtractor={item => item.id.toString()}
+      ListHeaderComponent={renderHeader}
+      ListEmptyComponent={renderEmptyOrdersList}
+    />
   )
 }
 
